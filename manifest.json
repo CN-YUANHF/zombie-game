@@ -1,0 +1,14 @@
+{
+  "name": "僵尸爆发 · 球球之战",
+  "short_name": "僵尸爆发",
+  "description": "袁伟洵原创设计的世界地图打僵尸策略游戏",
+  "start_url": "./僵尸爆发-球球之战.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#8ed6ff",
+  "theme_color": "#6ec6ff",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
