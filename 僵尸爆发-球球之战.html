@@ -21,9 +21,15 @@
   #startScreen {
     position: fixed; inset: 0; z-index: 100; overflow-y: auto;
     background: linear-gradient(180deg, #6ec6ff 0%, #bfeaff 55%, #d9f8e0 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
     padding: 20px; text-align: center;
   }
+  /* 手机竖屏内容居中但不被裁剪：用 margin:auto 代替 justify-content:center */
+  #startScreen > *:first-child { margin-top: auto; }
+  #startScreen > *:last-child { margin-bottom: auto; }
+  #startScreen .pickedHint { font-size: 16px; color: #1a9e4b; font-weight: bold; min-height: 22px; margin: 6px 0; }
+  @keyframes stepPop { 0%{transform:scale(.85);opacity:0} 100%{transform:scale(1);opacity:1} }
+  #startScreen .stepPop { animation: stepPop .35s ease-out; }
   #startScreen h1 { font-size: 46px; letter-spacing: 5px; color: #1a9e4b;
     text-shadow: 0 0 18px #ffffff, 0 4px 0 #b7f0c5; margin-bottom: 4px; }
   #startScreen .sub { font-size: 19px; color: #f76707; margin-bottom: 2px; letter-spacing: 3px; font-weight: bold; }
@@ -159,8 +165,9 @@
 <!-- ============ 开始界面（三步向导） ============ -->
 <div id="startScreen">
   <h1>🧟 僵尸爆发 🧟</h1>
-  <div class="sub">—— 球 球 之 战 v2.0 ——</div>
+  <div class="sub">—— 球 球 之 战 v2.1 ——</div>
   <div class="credit">原作设计：小袁同学（五年级） · 规则补全与数字化：Kimi</div>
+  <div class="pickedHint" id="pickedHint">👇 点下面的卡片开始</div>
 
   <div id="step1">
     <div class="stepTitle">第 1 步：选择游戏模式</div>
@@ -477,7 +484,12 @@ function buildStartCards(){
     const d = document.createElement('div');
     d.className = 'ccard';
     d.innerHTML = `<div class="flag">${MODES[k].e}</div><div class="cname">${MODES[k].n}</div><div class="desc">${MODES[k].desc}</div>`;
-    d.onclick = ()=>{ pick.mode=k; $('step1').classList.add('hidden'); $('step2').classList.remove('hidden'); };
+    d.onclick = ()=>{ pick.mode=k;
+      $('step1').classList.add('hidden'); $('step2').classList.remove('hidden');
+      $('step2').classList.add('stepPop');
+      $('pickedHint').textContent = `✅ 已选模式：${MODES[k].e}${MODES[k].n}　👇 再选角色`;
+      setTimeout(()=>{ $('pickedHint').scrollIntoView({behavior:'smooth', block:'start'}); }, 60);
+    };
     mc.appendChild(d);
   });
   const rc = $('roleCards');
@@ -485,7 +497,12 @@ function buildStartCards(){
     const d = document.createElement('div');
     d.className = 'ccard';
     d.innerHTML = `<div class="flag">${ROLES[k].e}</div><div class="cname">${ROLES[k].n}</div><div class="desc">${ROLES[k].desc}</div>`;
-    d.onclick = ()=>{ pick.role=k; $('step2').classList.add('hidden'); $('step3').classList.remove('hidden'); };
+    d.onclick = ()=>{ pick.role=k;
+      $('step2').classList.add('hidden'); $('step3').classList.remove('hidden');
+      $('step3').classList.add('stepPop');
+      $('pickedHint').textContent = `✅ 已选角色：${ROLES[k].e}${ROLES[k].n}　👇 最后选祖国`;
+      setTimeout(()=>{ $('pickedHint').scrollIntoView({behavior:'smooth', block:'start'}); }, 60);
+    };
     rc.appendChild(d);
   });
   const box = $('ccards');
