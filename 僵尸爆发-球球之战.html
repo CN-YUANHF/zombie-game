@@ -324,7 +324,7 @@
 <div class="backdrop" id="helpBk">
   <div class="modal" style="text-align:left">
     <h2 style="text-align:center">📖 规则说明 v2.0</h2>
-    <p>🎯 <b>目标</b>：经典/极限模式——清零全世界僵尸，或攒 20 漏巾换「无限王权」直接通关；无限模式——僵尸每波 ×1.5，看你能撑几波！13 区全沦陷则失败。</p>
+    <p>🎯 <b>目标</b>：经典/极限模式——清零全世界僵尸，或攒 20 漏巾换「无限王权」直接通关；无限模式——僵尸每波 ×1.5，看你能撑几波！家园被攻破或 13 区全沦陷则失败。</p>
     <p>🎭 <b>角色</b>：普通人无加成；😈残暴主义者攻+50%但战败损失75%；🥼科学家开局3支血清救回被感染士兵、每回合+5步兵、攻-25%；💣自爆兵每2回合1支自爆小队，战败时同归于尽。</p>
     <p>💰 <b>收入</b>：工资 = 底薪4 + 每解放1区+1 + 每个军事基地+2；每消灭10个僵尸掉落1张白纸。汇率3:1。</p>
     <p>⚔️ <b>战斗</b>：我方骰子×总攻击力 vs 僵尸骰子×数量（极限模式僵尸固定20×数量）。攻击力：步兵0.5 / 坦克1 / 歼20·1 / 歼35·1.25 / 直升机1.1。赢则清区插旗🚩；输则损失一半兵力（残暴75%），且每损失5人就有1人被🧟感染加入僵尸（血清可救回）；残部会撤往军事基地。每回合进攻3次。</p>
@@ -384,7 +384,7 @@ const TERRAIN = {
 const MODES = {
   classic:{e:'🌍', n:'经典模式', desc:'清零全球僵尸即胜利，标准难度，适合上手'},
   endless:{e:'♾️', n:'无限模式', desc:'开局15个僵尸，每过一波僵尸数量×1.5，看你能撑几波！'},
-  extreme:{e:'🔥', n:'极限模式', desc:'僵尸血量×200%、攻击力高达20，硬核挑战！'},
+  extreme:{e:'🔥', n:'极限模式', desc:'僵尸改掷20面骰（攻击力最高20），硬核挑战！'},
 };
 const ROLES = {
   normal:   {e:'🧑', n:'普通人',     desc:'无加成，也无弱点'},
@@ -534,12 +534,17 @@ function startGame(mode, role, home){
     const f = pool.splice(rnd(pool.length),1)[0];
     infect(f.id, 15);
     var initMsg = `🌍 无限模式开始！【${f.n}】出现15个僵尸，每过一波数量×1.5，撑住！`;
+  } else if (mode==='extreme'){
+    const picks = [];
+    while (picks.length < 3) picks.push(pool.splice(rnd(pool.length),1)[0]);
+    picks.forEach(f=>infect(f.id, 12));
+    var initMsg = `🌍 僵尸在【${picks.map(f=>f.n).join('】【')}】爆发了（极限模式：僵尸攻击力20！）！`;
   } else {
     const spots = pool.splice(rnd(pool.length),1)[0];
     const picks = [spots];
     while (picks.length < 4) picks.push(pool.splice(rnd(pool.length),1)[0]);
     picks.forEach(f=>infect(f.id, 25));
-    var initMsg = `🌍 僵尸在【${picks.map(f=>f.n).join('】【')}】同时爆发了${mode==='extreme'?'（极限模式：血量×2、攻击20！）':''}！`;
+    var initMsg = `🌍 僵尸在【${picks.map(f=>f.n).join('】【')}】同时爆发了！`;
   }
   $('startScreen').style.display='none';
   $('game').style.display='block';
@@ -557,7 +562,7 @@ function startGame(mode, role, home){
 
 /* ================= 感染扩散 ================= */
 function infect(id, n){
-  if (S.mode==='extreme') n *= 2; // 极限模式：血量×200%
+  // 极限模式：不再×2血量（攻击力20×数量已足够极限，×2会导致数学上无解）
   if (!S.z[id]) S.z[id] = {n:0, type: ZTYPES[rnd(3)]};
   S.z[id].n += n;
   if (S.z[id].n > 999) S.z[id].n = 999;
@@ -593,12 +598,13 @@ function zombieTurn(){
     Object.keys(S.z).forEach(id=>{ S.z[id].n = Math.min(999, Math.ceil(S.z[id].n*1.5)); });
     summary = `🎲 第${S.turn}波：${news.join('；')}；所有僵尸 ×1.5！`;
   } else {
-    Object.keys(S.z).forEach(id=>{ S.z[id].n = Math.min(999, S.z[id].n+2); });
+    const growth = S.mode==='extreme' ? 1 : 2; // 极限模式自然增殖减半（攻击20已够凶）
+    Object.keys(S.z).forEach(id=>{ S.z[id].n = Math.min(999, S.z[id].n+growth); });
     if (d===6){
       Object.keys(S.z).forEach(id=>{ S.z[id].n = Math.min(999, S.z[id].n+5); });
-      summary = `🎲 僵尸掷出 6 —— 大爆发！！${news.join('；')}；所有感染区僵尸 +7！`;
+      summary = `🎲 僵尸掷出 6 —— 大爆发！！${news.join('；')}；所有感染区僵尸 +${growth+5}！`;
     } else {
-      summary = `🎲 僵尸掷出 ${d}：${news.join('；')}；所有感染区僵尸 +2`;
+      summary = `🎲 僵尸掷出 ${d}：${news.join('；')}；所有感染区僵尸 +${growth}`;
     }
   }
   // 幕后主使：每3回合在大陆边缘空投僵尸小队
@@ -606,7 +612,7 @@ function zombieTurn(){
     const edge = R.filter(r=>!hasWall(r.id));
     const t = edge[rnd(edge.length)];
     infect(t.id, 12);
-    const drop = `🦹 幕后主使在【${t.n}】空投了一支僵尸小队（+${S.mode==='extreme'?24:12}）！`;
+    const drop = `🦹 幕后主使在【${t.n}】空投了一支僵尸小队（+12）！`;
     news.push(drop);
     summary += ' ' + drop;
   }
@@ -802,17 +808,19 @@ function resolveBattle(id, commit, gene, d1, d2, suicideUsed){
   const z = S.z[id];
   const counter = gene && COUNTER[gene]===z.type;
   const bonus = counter ? 2 : 0;
-  let unitsPower = commit.infantry*UATK.infantry + commit.tank*(UATK.tank) + commit.boomer*UATK.boomer
-                 + commit.j35*UATK.j35 + commit.heli*UATK.heli;
-  if (commit.tank>0) unitsPower += S.tankBonus; // 合成强化
+  // 角色加成只作用于「士兵」（地面部队：步兵+坦克），空军不受影响
+  const groundPower = commit.infantry*UATK.infantry + commit.tank*UATK.tank + (commit.tank>0 ? S.tankBonus : 0);
+  const airPower = commit.boomer*UATK.boomer + commit.j35*UATK.j35 + commit.heli*UATK.heli;
   const roleMult = S.role==='brutal' ? 1.5 : S.role==='scientist' ? 0.75 : 1;
+  const unitsPower = groundPower*roleMult + airPower;
   const terr = S.terrain[id];
   const pTerr = terr==='city' ? 1.1 : 1;
   const zTerr = terr==='forest' ? 0.9 : 1;
-  const pPow = Math.round((d1+bonus) * unitsPower * roleMult * pTerr);
-  const zPow = S.mode==='extreme' ? Math.round(20 * z.n * zTerr) : Math.round(d2 * z.n * zTerr);
+  const pPow = Math.round((d1+bonus) * unitsPower * pTerr);
+  const zDie = S.mode==='extreme' ? 1+rnd(20) : d2; // 极限模式：僵尸掷20面骰
+  const zPow = Math.round(zDie * z.n * zTerr);
   const totalUnits = commit.infantry+commit.tank+commit.boomer+commit.j35+commit.heli;
-  let html = `我方 (${d1}${bonus?`+${bonus}`:''}) × 攻击力${unitsPower.toFixed(1)}${roleMult!==1?` ×${roleMult}`:''}${pTerr!==1?' ×1.1(城市)':''} = <b>${pPow}</b> ｜ 僵尸 ${S.mode==='extreme'?'20':d2} × ${z.n}${zTerr!==1?' ×0.9(森林)':''} = <b>${zPow}</b><br>`;
+  let html = `我方 (${d1}${bonus?`+${bonus}`:''}) × 攻击力${unitsPower.toFixed(1)}${roleMult!==1?`（士兵×${roleMult}）`:''}${pTerr!==1?' ×1.1(城市)':''} = <b>${pPow}</b> ｜ 僵尸 ${S.mode==='extreme'?('🎲20面骰:'+zDie):d2} × ${z.n}${zTerr!==1?' ×0.9(森林)':''} = <b>${zPow}</b><br>`;
   if (gene) html += counter ? `💉 ${ZNAME[gene]}基因针命中克制！骰子 +2！<br>` : `💉 基因针没克制对方属性，浪费了……<br>`;
 
   if (pPow >= zPow){
@@ -929,6 +937,15 @@ function fireNuke(id){
 /* ================= 回合 ================= */
 function endTurn(){
   if (S.over) return;
+  // 无限模式：结束回合时家园仍有僵尸 → 家园沦陷（给玩家一整个回合的反应时间）
+  if (S.mode==='endless' && S.z[S.home]){
+    S.over = true;
+    $('endTitle').textContent = '🏚️ 家园沦陷了……';
+    $('endText').textContent = `无限模式：僵尸攻破了【${rBy(S.home).n}】！\n你坚守了 ${S.turn} 波，消灭僵尸 ${S.kills} 个！\n点击按钮再挑战一次，打破自己的纪录！`;
+    $('endScreen').style.display='flex';
+    sndBoom();
+    return;
+  }
   const bases = Object.keys(S.buildings).filter(b=>S.buildings[b].type==='base' && S.controlled[b]).length;
   const income = 4 + Math.max(0, controlledIds().length - 1) + bases*2;
   S.money.bai += income;
