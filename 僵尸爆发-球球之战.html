@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="僵尸爆发">
+<meta name="theme-color" content="#6ec6ff">
+<link rel="manifest" href="manifest.json">
+<title>僵尸爆发 · 球球之战</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  body { -webkit-user-select: none; user-select: none; }
+  input, textarea { -webkit-user-select: text; user-select: text; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: linear-gradient(180deg, #8ed6ff 0%, #d8f4ff 45%, #eafbf0 100%);
+    color: #2b3a55; min-height: 100vh; overflow-x: hidden;
+  }
+  /* ---------- 开始界面 ---------- */
+  #startScreen {
+    position: fixed; inset: 0; z-index: 100;
+    background: linear-gradient(180deg, #6ec6ff 0%, #bfeaff 55%, #d9f8e0 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 20px; text-align: center;
+  }
+  #startScreen h1 {
+    font-size: 52px; letter-spacing: 6px; color: #1a9e4b;
+    text-shadow: 0 0 18px #ffffff, 0 4px 0 #b7f0c5; margin-bottom: 6px;
+  }
+  #startScreen .sub { font-size: 20px; color: #f76707; margin-bottom: 4px; letter-spacing: 3px; font-weight: bold; }
+  #startScreen .credit { font-size: 13px; color: #4a6a8a; margin-bottom: 28px; }
+  .ccards { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; max-width: 760px; }
+  .ccard {
+    width: 150px; padding: 16px 10px; border-radius: 16px; cursor: pointer;
+    background: #ffffff; color: #2b3a55;
+    border: 3px solid #ffd166; transition: all .18s;
+    box-shadow: 0 4px 12px #0001;
+  }
+  .ccard:hover { transform: translateY(-6px) scale(1.05); border-color: #ff6b9d; box-shadow: 0 10px 24px #ff6b9d55; }
+  .ccard .flag { font-size: 44px; }
+  .ccard .cname { font-size: 19px; font-weight: bold; margin-top: 6px; }
+  .ccard .kid { font-size: 13px; color: #f76707; margin-top: 2px; font-weight: bold; }
+  #startScreen .tip { margin-top: 26px; font-size: 14px; color: #3d5a80; font-weight: bold; }
+  /* ---------- 主界面 ---------- */
+  #game { display: none; }
+  #topbar {
+    display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+    padding: 8px 16px; background: #ffffff; border-bottom: 3px solid #ffd166;
+    font-size: 15px; position: sticky; top: 0; z-index: 10;
+  }
+  #topbar .res { background: #fff6de; padding: 4px 10px; border-radius: 999px; white-space: nowrap; border: 1px solid #ffe3a1; }
+  #topbar .res b { color: #e67e22; }
+  #topbar .spacer { flex: 1; }
+  #main { display: flex; gap: 10px; padding: 10px; align-items: flex-start; }
+  #mapWrap { flex: 1 1 auto; min-width: 0; }
+  svg { width: 100%; height: auto; display: block; background: linear-gradient(#6ec6ff, #b3e5ff); border-radius: 12px; border: 3px solid #ffffff; box-shadow: 0 4px 14px #0002; }
+  .land { fill: #8ede6f; stroke: #57b24a; stroke-width: 2; }
+  .link { stroke: #ffffff99; stroke-width: 2; stroke-dasharray: 5 5; }
+  .region { cursor: pointer; }
+  .rzone { fill: #ffffff55; stroke: #ffffffbb; stroke-width: 1.5; }
+  .region:hover .rzone { stroke: #ff6b9d; }
+  .region.selected .rzone { stroke: #ff9f1c; stroke-width: 3.5; fill: #ffe8b3aa; }
+  .rz { stroke-width: 3.5; fill: #ffffffcc; display: none; }
+  .rz.t-cao { stroke: #2fb344; } .rz.t-shui { stroke: #1c7ed6; } .rz.t-huo { stroke: #f76707; }
+  .rcount { fill: #c1121f; font-size: 15px; font-weight: bold; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+  .rname { fill: #14335c; font-size: 14px; font-weight: bold; text-anchor: middle; pointer-events: none; }
+  .rflag { font-size: 16px; text-anchor: middle; pointer-events: none; }
+  /* 侧边栏 */
+  #side { width: 320px; flex: 0 0 320px; display: flex; flex-direction: column; gap: 10px; }
+  .panel { background: #ffffff; border: 2px solid #bfe0ff; border-radius: 14px; padding: 10px 12px; box-shadow: 0 3px 10px #0001; }
+  .panel h3 { font-size: 15px; color: #f76707; margin-bottom: 8px; }
+  .shopbtn {
+    display: flex; justify-content: space-between; align-items: center; width: 100%;
+    margin: 4px 0; padding: 7px 10px; border-radius: 10px; border: 2px solid #bfe0ff;
+    background: #f4f9ff; color: #2b3a55; font-size: 14px; cursor: pointer; transition: all .12s;
+  }
+  .shopbtn:hover:not(:disabled) { background: #eaffe9; border-color: #2fb344; }
+  .shopbtn:disabled { opacity: .4; cursor: not-allowed; }
+  .shopbtn .price { color: #e67e22; font-size: 13px; font-weight: bold; }
+  .actbtn {
+    width: 100%; padding: 11px; margin-top: 6px; border: none; border-radius: 12px;
+    font-size: 16px; font-weight: bold; cursor: pointer; transition: all .12s;
+  }
+  .actbtn:disabled { opacity: .35; cursor: not-allowed; }
+  #btn-attack { background: linear-gradient(135deg, #ff9f1c, #ff5a36); color: #fff; }
+  #btn-nuke { background: linear-gradient(135deg, #ff5da2, #b5179e); color: #fff; }
+  #btn-end { background: linear-gradient(135deg, #52c41a, #2fb344); color: #fff; }
+  .actbtn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+  #log { height: 190px; overflow-y: auto; font-size: 13px; line-height: 1.55; }
+  #log p { margin: 2px 0; padding: 2px 6px; border-radius: 6px; background: #f0f6ff; }
+  #log .good { color: #1a9e4b; } #log .bad { color: #e63946; } #log .info { color: #1971c2; } #log .gold { color: #e8890c; }
+  .smallbtns { display: flex; gap: 6px; }
+  .smallbtns button {
+    flex: 1; padding: 5px 2px; font-size: 12px; border-radius: 8px; cursor: pointer;
+    background: #ffffff; color: #3d5a80; border: 2px solid #bfe0ff;
+  }
+  .smallbtns button:hover { border-color: #ff9f1c; }
+  /* 僵尸圈脉冲 */
+  @keyframes pulse { 0%,100% { stroke-opacity: 1; } 50% { stroke-opacity: .35; } }
+  .rz { animation: pulse 1.6s ease-in-out infinite; }
+  /* 解放进度条 */
+  #progressWrap { background:#fff; border:2px solid #bfe0ff; border-radius:999px; padding:6px 12px; margin-bottom:8px; display:flex; align-items:center; gap:10px; font-size:14px; font-weight:bold; color:#3d5a80; box-shadow:0 3px 10px #0001; }
+  #progressBarBg { flex:1; height:14px; background:#eaf3ff; border-radius:999px; overflow:hidden; }
+  #progressBar { height:100%; width:0%; background:linear-gradient(90deg,#52c41a,#8ede6f); border-radius:999px; transition:width .5s; }
+  /* 地图图例 */
+  #mapWrap { position:relative; }
+  #legend { position:absolute; right:14px; top:10px; background:#ffffffdd; border:2px solid #bfe0ff; border-radius:10px; padding:6px 10px; font-size:12px; color:#3d5a80; line-height:1.7; pointer-events:none; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 3px 0 8px; border:2.5px solid; }
+  /* 僵尸回合横幅 */
+  #zbanner {
+    position:fixed; top:64px; left:50%; transform:translateX(-50%); z-index:40;
+    background:linear-gradient(135deg,#ff5a36,#f76707); color:#fff; font-size:17px; font-weight:bold;
+    padding:10px 26px; border-radius:999px; box-shadow:0 8px 24px #f7670788; display:none;
+    animation:bannerIn .3s ease-out;
+  }
+  @keyframes bannerIn { from { transform:translateX(-50%) translateY(-18px); opacity:0; } to { transform:translateX(-50%) translateY(0); opacity:1; } }
+  /* 撒花 */
+  .confetti { position:fixed; top:-40px; z-index:99; font-size:26px; pointer-events:none; animation:fall linear forwards; }
+  @keyframes fall { to { transform:translateY(108vh) rotate(720deg); } }
+  /* ---------- 弹窗 ---------- */
+  .backdrop {
+    position: fixed; inset: 0; background: #0008; z-index: 50;
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal {
+    background: #ffffff; border: 3px solid #ffd166; border-radius: 18px;
+    padding: 22px 26px; width: 420px; max-width: 92vw; text-align: center;
+    box-shadow: 0 12px 48px #0004;
+  }
+  .modal h2 { color: #f76707; margin-bottom: 10px; font-size: 22px; }
+  .modal p { font-size: 14px; color: #2b3a55; margin: 6px 0; }
+  .troopRow { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 15px; }
+  .troopRow label { width: 110px; text-align: right; }
+  .troopRow input {
+    width: 80px; padding: 6px; border-radius: 8px; border: 2px solid #bfe0ff;
+    background: #f4f9ff; color: #2b3a55; font-size: 15px; text-align: center;
+  }
+  .troopRow .maxb { padding: 4px 8px; font-size: 12px; border-radius: 6px; border: 2px solid #bfe0ff; background: #ffffff; color: #3d5a80; cursor: pointer; }
+  .genes { display: flex; gap: 8px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+  .genes label {
+    padding: 6px 10px; border-radius: 8px; border: 2px solid #bfe0ff; cursor: pointer; font-size: 14px; background: #f4f9ff;
+  }
+  .genes input { margin-right: 4px; }
+  .modalbtns { display: flex; gap: 10px; margin-top: 14px; }
+  .modalbtns button { flex: 1; padding: 10px; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
+  .btn-go { background: linear-gradient(135deg, #ff9f1c, #ff5a36); color: #fff; }
+  .btn-no { background: #e9f2ff; color: #3d5a80; }
+  #diceRow { font-size: 64px; letter-spacing: 18px; margin: 12px 0; min-height: 80px; }
+  #battleResult { font-size: 16px; min-height: 48px; }
+  /* 结算界面 */
+  #endScreen {
+    position: fixed; inset: 0; z-index: 90; display: none;
+    align-items: center; justify-content: center; background: #0008;
+  }
+  #endBox { text-align: center; background: #ffffff; border-radius: 22px; padding: 40px 50px; border: 4px solid #ffd166; max-width: 90vw; box-shadow: 0 16px 60px #0005; }
+  #endTitle { font-size: 42px; margin-bottom: 12px; }
+  #endText { font-size: 16px; line-height: 1.8; color: #2b3a55; white-space: pre-line; }
+  #btn-restart { margin-top: 22px; padding: 12px 36px; font-size: 18px; font-weight: bold; border: none; border-radius: 14px; background: linear-gradient(135deg, #52c41a, #2fb344); color: #fff; cursor: pointer; }
+  @media (max-width: 900px) {
+    #main { flex-direction: column; }
+    #side { width: 100%; flex: none; }
+    #topbar { font-size: 13px; gap: 6px 10px; padding: 6px 8px; }
+    #startScreen h1 { font-size: 36px; letter-spacing: 3px; }
+    #startScreen .sub { font-size: 16px; }
+    .ccard { width: 128px; padding: 12px 6px; }
+    .ccard .flag { font-size: 36px; }
+    #diceRow { font-size: 48px; letter-spacing: 10px; }
+    .modal { padding: 16px 14px; }
+    #log { height: 140px; }
+    #zbanner { font-size: 14px; padding: 8px 16px; max-width: 92vw; text-align: center; }
+    #endBox { padding: 26px 20px; }
+    #endTitle { font-size: 30px; }
+    #legend { font-size: 11px; padding: 4px 8px; }
+    .actbtn { padding: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ 开始界面 ============ -->
+<div id="startScreen">
+  <h1>🧟 僵尸爆发 🧟</h1>
+  <div class="sub">—— 球 球 之 战 ——</div>
+  <div class="credit">原作设计：袁伟洵（五年级 8 班） · 规则补全与数字化：Kimi</div>
+  <div class="ccards" id="ccards"></div>
+  <div class="tip">👆 选择你的国家，带领全人类抵抗僵尸！（最多支持 6 国：美 / 中 / 蒙 / 俄 / 巴西 / 英）</div>
+</div>
+
+<!-- ============ 游戏主界面 ============ -->
+<div id="game">
+  <div id="topbar">
+    <span class="res">🧻白纸 <b id="m-bai">0</b></span>
+    <span class="res">📄绵纸 <b id="m-mian">0</b></span>
+    <span class="res">🎗️帚巾 <b id="m-zhou">0</b></span>
+    <span class="res">🟣漏巾 <b id="m-lou">0</b></span>
+    <span class="res">🚜坦克 <b id="t-tank">0</b></span>
+    <span class="res">✈️轰炸机 <b id="t-boomer">0</b></span>
+    <span class="res">🚁直升机 <b id="t-heli">0</b></span>
+    <span class="res">☢️核弹 <b id="n-total">0</b></span>
+    <span class="res">💉基因针 <b id="g-total">0</b></span>
+    <span class="spacer"></span>
+    <span class="res">回合 <b id="turn-num">1</b></span>
+    <span class="res">💀消灭 <b id="kill-num">0</b></span>
+  </div>
+  <div id="zbanner"></div>
+  <div id="main">
+    <div id="mapWrap">
+      <div id="progressWrap"><span>🗺️ 世界解放进度</span><div id="progressBarBg"><div id="progressBar"></div></div><span id="progressText">0/13</span></div>
+      <div id="legend">🧟 僵尸属性：<span class="dot" style="border-color:#2fb344"></span>草<span class="dot" style="border-color:#1c7ed6"></span>水<span class="dot" style="border-color:#f76707"></span>火<br>⭐ 我的祖国　🚩 已解放</div>
+      <svg id="map" viewBox="0 0 1000 620">
+        <!-- 大陆（示意形状） -->
+        <path class="land" d="M40,80 Q120,20 220,50 Q320,60 300,140 Q320,200 260,250 Q220,300 180,280 Q120,260 80,200 Q30,150 40,80 Z"/>
+        <path class="land" d="M300,40 Q350,20 380,50 Q370,90 320,90 Q290,70 300,40 Z"/>
+        <path class="land" d="M230,330 Q290,300 330,340 Q360,400 330,470 Q300,530 270,500 Q230,440 230,330 Z"/>
+        <path class="land" d="M430,90 Q500,50 570,90 Q600,140 570,200 Q520,240 470,210 Q420,170 430,90 Z"/>
+        <path class="land" d="M450,270 Q530,240 600,280 Q630,350 590,430 Q540,480 490,440 Q440,370 450,270 Z"/>
+        <path class="land" d="M590,60 Q750,20 900,80 Q960,160 920,260 Q880,340 800,330 Q760,300 720,260 Q640,240 600,190 Q560,120 590,60 Z"/>
+        <path class="land" d="M810,400 Q880,380 930,420 Q950,470 900,500 Q840,510 810,470 Q790,430 810,400 Z"/>
+        <path class="land" d="M60,565 Q500,535 950,565 L950,615 L60,615 Z"/>
+        <g id="links"></g>
+        <g id="regions"></g>
+      </svg>
+    </div>
+    <div id="side">
+      <div class="panel">
+        <h3>🛒 军备商店</h3>
+        <button class="shopbtn" data-buy="boomer"><span>✈️ 轰炸机 ×20（可打全球）</span><span class="price">5 白纸</span></button>
+        <button class="shopbtn" data-buy="tank"><span>🚜 坦克 ×30（只打邻国）</span><span class="price">8 白纸</span></button>
+        <button class="shopbtn" data-buy="heli"><span>🚁 直升机 ×80（可打全球）</span><span class="price">10 绵纸</span></button>
+        <button class="shopbtn" data-buy="gene_cao"><span>💉 草基因针 ×1（克水僵尸）</span><span class="price">5 绵纸</span></button>
+        <button class="shopbtn" data-buy="gene_shui"><span>💉 水基因针 ×1（克火僵尸）</span><span class="price">5 绵纸</span></button>
+        <button class="shopbtn" data-buy="gene_huo"><span>💉 火基因针 ×1（克草僵尸）</span><span class="price">5 绵纸</span></button>
+      </div>
+      <div class="panel">
+        <h3>☢️ 核弹发射井（存量：<span id="nuke-inv">0/0/0/0</span>）</h3>
+        <button class="shopbtn" data-buy="nuke1"><span>☢️ 核弹 LV1 ×10（清 1 地区）</span><span class="price">5 帚巾</span></button>
+        <button class="shopbtn" data-buy="nuke2"><span>☢️ 核弹 LV2 ×20（清 1 地区+邻区减半）</span><span class="price">7 帚巾</span></button>
+        <button class="shopbtn" data-buy="nuke3"><span>☢️ 核弹 LV3 ×5（炸 2 个黑龙江省）</span><span class="price">6 帚巾</span></button>
+        <button class="shopbtn" data-buy="nuke4"><span>☢️ 核弹 LV4 ×3（炸 3 个黑龙江省）</span><span class="price">8 漏巾</span></button>
+        <button class="shopbtn" data-buy="crown" style="border-color:#ffd166"><span>👑 无限王权（直接获胜！）</span><span class="price">20 漏巾</span></button>
+      </div>
+      <div class="panel">
+        <h3>💱 换钱所（3 换 1）</h3>
+        <div class="smallbtns">
+          <button data-ex="bai>mian">3白纸→1绵纸</button>
+          <button data-ex="mian>zhou">3绵纸→1帚巾</button>
+          <button data-ex="zhou>lou">3帚巾→1漏巾</button>
+        </div>
+        <div class="smallbtns" style="margin-top:4px">
+          <button data-ex="mian>bai">1绵纸→3白纸</button>
+          <button data-ex="zhou>mian">1帚巾→3绵纸</button>
+          <button data-ex="lou>zhou">1漏巾→3帚巾</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>🎯 行动（每回合：进攻 3 次 + 核弹 2 发）</h3>
+        <div style="font-size:13px;color:#1971c2;margin-bottom:4px" id="selinfo">点击地图选择目标地区</div>
+        <button class="actbtn" id="btn-attack" disabled>⚔️ 进攻选中地区（剩 <span id="atk-left">2</span> 次）</button>
+        <button class="actbtn" id="btn-nuke" disabled>☢️ 发射核弹（剩 <span id="nk-left">2</span> 发）</button>
+        <button class="actbtn" id="btn-end">⏭️ 结束回合（领工资）</button>
+      </div>
+      <div class="panel">
+        <h3>📜 战报</h3>
+        <div id="log"></div>
+        <div class="smallbtns" style="margin-top:6px">
+          <button id="btn-help">📖 规则说明</button>
+          <button id="btn-mute">🔊 音效开</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 战斗弹窗 ============ -->
+<div class="backdrop" id="battleBk">
+  <div class="modal">
+    <h2 id="battle-title">进攻</h2>
+    <p id="b-zinfo"></p>
+    <div id="b-form">
+      <div class="troopRow"><label>🚜 坦克：</label><input id="in-tank" type="number" min="0" value="0"><button class="maxb" data-max="in-tank">最大</button><span id="hint-tank" style="font-size:12px;color:#1971c2"></span></div>
+      <div class="troopRow"><label>✈️ 轰炸机：</label><input id="in-boomer" type="number" min="0" value="0"><button class="maxb" data-max="in-boomer">最大</button></div>
+      <div class="troopRow"><label>🚁 直升机：</label><input id="in-heli" type="number" min="0" value="0"><button class="maxb" data-max="in-heli">最大</button></div>
+      <div class="genes" id="gene-pick">
+        <label><input type="radio" name="gene" value="" checked>不用针</label>
+        <label><input type="radio" name="gene" value="cao">🌿草(<span id="gc-cao">0</span>)</label>
+        <label><input type="radio" name="gene" value="shui">💧水(<span id="gc-shui">0</span>)</label>
+        <label><input type="radio" name="gene" value="huo">🔥火(<span id="gc-huo">0</span>)</label>
+      </div>
+    </div>
+    <div id="diceRow"></div>
+    <div id="battleResult"></div>
+    <div class="modalbtns">
+      <button class="btn-go" id="btn-fight">⚔️ 开战！</button>
+      <button class="btn-no" id="btn-bcancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 核弹选择弹窗 ============ -->
+<div class="backdrop" id="nukeBk">
+  <div class="modal">
+    <h2>☢️ 选择要发射的核弹</h2>
+    <button class="shopbtn" data-fire="1"><span>LV1（清 1 个地区）</span><span class="price">存 <span id="nn1">0</span> 枚</span></button>
+    <button class="shopbtn" data-fire="2"><span>LV2（清 1 地区 + 邻区减半）</span><span class="price">存 <span id="nn2">0</span> 枚</span></button>
+    <button class="shopbtn" data-fire="3"><span>LV3（可炸 2 个黑龙江省）</span><span class="price">存 <span id="nn3">0</span> 枚</span></button>
+    <button class="shopbtn" data-fire="4"><span>LV4（可炸 3 个黑龙江省）</span><span class="price">存 <span id="nn4">0</span> 枚</span></button>
+    <div class="modalbtns"><button class="btn-no" id="btn-ncancel">取消</button></div>
+  </div>
+</div>
+
+<!-- ============ 规则弹窗 ============ -->
+<div class="backdrop" id="helpBk">
+  <div class="modal" style="text-align:left;max-height:86vh;overflow-y:auto">
+    <h2 style="text-align:center">📖 规则说明</h2>
+    <p>🎯 <b>目标</b>：清零全世界僵尸（消灭最多者称"救世主"），或攒 20 漏巾换「无限王权」直接获胜；若全球 13 个地区全部沦陷则失败。</p>
+    <p>💰 <b>收入</b>：每回合结束领工资 = 底薪 4 张白纸 + 每解放 1 个地区再 +1；每消灭 10 个僵尸赏 1 张白纸。汇率 3:1 逐级兑换。</p>
+    <p>⚔️ <b>战斗</b>：我方骰子 × 参战兵力 vs 僵尸骰子 × 僵尸数，大者胜（平算赢）。赢则该地区僵尸全灭并插旗🚩；输则参战兵力损失一半。坦克只能打与你领土相邻的地区，飞机全球可打。每回合最多进攻 3 次。</p>
+    <p>💉 <b>基因针</b>：草克水、水克火、火克草。属性克制时骰子 +2。一针只能用一次。</p>
+    <p>☢️ <b>核弹</b>：LV1 清 1 地区；LV2 清 1 地区且邻区僵尸减半；LV3 连炸 2 个地区（相当于 2 个黑龙江省）；LV4 连炸 3 个地区。每回合最多 2 发。</p>
+    <p>🧟 <b>僵尸回合</b>：掷骰子 1~3 新增 1 个感染区，4~5 新增 2 个，6 大爆发新增 3 个；所有感染区每回合自然增殖 +2（大爆发再 +5）。第 6 回合起新感染区僵尸变多，第 12 回合更多！</p>
+    <div class="modalbtns"><button class="btn-no" id="btn-hclose">知道了！</button></div>
+  </div>
+</div>
+
+<!-- ============ 结算界面 ============ -->
+<div id="endScreen">
+  <div id="endBox">
+    <div id="endTitle"></div>
+    <div id="endText"></div>
+    <button id="btn-restart">🔄 再玩一局</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= 数据 ================= */
+const R = [
+  {id:'usa', n:'美国',   x:175, y:205, e:'🇺🇸', adj:['can','bra']},
+  {id:'can', n:'加拿大', x:150, y:105, e:'🍁', adj:['usa','rus']},
+  {id:'bra', n:'巴西',   x:280, y:405, e:'🇧🇷', adj:['usa','afr']},
+  {id:'uk',  n:'英国',   x:460, y:125, e:'🇬🇧', adj:['eur']},
+  {id:'eur', n:'欧洲',   x:520, y:180, e:'🏰', adj:['uk','afr','rus','mid']},
+  {id:'afr', n:'非洲',   x:520, y:345, e:'🦁', adj:['bra','eur','mid']},
+  {id:'rus', n:'俄罗斯', x:700, y:115, e:'🇷🇺', adj:['can','eur','mid','mon']},
+  {id:'mid', n:'中东',   x:605, y:255, e:'🐫', adj:['eur','afr','rus','ind']},
+  {id:'ind', n:'印度',   x:690, y:300, e:'🐘', adj:['mid','chn','sea']},
+  {id:'mon', n:'蒙古',   x:775, y:190, e:'🐎', adj:['rus','chn']},
+  {id:'chn', n:'中国',   x:815, y:255, e:'🇨🇳', adj:['mon','ind','sea']},
+  {id:'sea', n:'东南亚', x:810, y:340, e:'🌴', adj:['ind','chn','aus']},
+  {id:'aus', n:'澳大利亚',x:875, y:450, e:'🦘', adj:['sea']},
+];
+const KIDS = {usa:'毛同学', chn:'陈同学', mon:'张一弛', rus:'郭同学', bra:'姜同学', uk:'王同学'};
+const FLAGS = {usa:'🇺🇸', chn:'🇨🇳', mon:'🇲🇳', rus:'🇷🇺', bra:'🇧🇷', uk:'🇬🇧'};
+const TIERS = ['bai','mian','zhou','lou'];
+const UNIT = {bai:1, mian:3, zhou:9, lou:27};
+const TNAME = {bai:'白纸', mian:'绵纸', zhou:'帚巾', lou:'漏巾'};
+const ZTYPES = ['cao','shui','huo'];
+const ZNAME = {cao:'🌿草', shui:'💧水', huo:'🔥火'};
+const COUNTER = {cao:'shui', shui:'huo', huo:'cao'}; // 草克水、水克火、火克草
+const FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+const SHOP = {
+  boomer:{tier:'bai', n:5,  give:s=>s.troops.boomer+=20, msg:'购入 ✈️轰炸机 ×20！'},
+  tank:  {tier:'bai', n:8,  give:s=>s.troops.tank+=30,   msg:'购入 🚜坦克 ×30！'},
+  heli:  {tier:'mian',n:10, give:s=>s.troops.heli+=80,   msg:'购入 🚁直升机 ×80！'},
+  gene_cao: {tier:'mian',n:5, give:s=>s.genes.cao++,  msg:'购入 💉草基因针 ×1！'},
+  gene_shui:{tier:'mian',n:5, give:s=>s.genes.shui++, msg:'购入 💉水基因针 ×1！'},
+  gene_huo: {tier:'mian',n:5, give:s=>s.genes.huo++,  msg:'购入 💉火基因针 ×1！'},
+  nuke1:{tier:'zhou', n:5, give:s=>s.nukes[1]+=10, msg:'购入 ☢️核弹LV1 ×10！'},
+  nuke2:{tier:'zhou', n:7, give:s=>s.nukes[2]+=20, msg:'购入 ☢️核弹LV2 ×20！'},
+  nuke3:{tier:'zhou', n:6, give:s=>s.nukes[3]+=5,  msg:'购入 ☢️核弹LV3 ×5（每枚可炸2个黑龙江省）！'},
+  nuke4:{tier:'lou',  n:8, give:s=>s.nukes[4]+=3,  msg:'购入 ☢️核弹LV4 ×3（每枚可炸3个黑龙江省）！'},
+};
+const $ = id => document.getElementById(id);
+const rBy = id => R.find(r=>r.id===id);
+const rnd = n => Math.floor(Math.random()*n);
+const roll = () => 1+rnd(6);
+
+let S = null;   // 游戏状态
+let muted = false;
+
+/* ================= 音效 ================= */
+let AC = null;
+function beep(freq, dur, type){
+  if (muted) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type||'square'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.08, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+    o.connect(g); g.connect(AC.destination);
+    o.start(); o.stop(AC.currentTime + dur);
+  }catch(e){}
+}
+const sndBuy = ()=>{beep(660,.12);setTimeout(()=>beep(880,.15),100);};
+const sndBoom = ()=>{beep(90,.5,'sawtooth');setTimeout(()=>beep(60,.6,'sawtooth'),120);};
+const sndWin = ()=>{[523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.25,'triangle'),i*160));};
+const sndDice = ()=>{beep(300,.08);setTimeout(()=>beep(400,.08),90);};
+
+/* ================= 初始化 ================= */
+function buildMap(){
+  const links = $('links'), regs = $('regions');
+  const drawn = {};
+  R.forEach(r=>{
+    r.adj.forEach(a=>{
+      const key = [r.id,a].sort().join('-');
+      if (drawn[key]) return; drawn[key]=1;
+      const t = rBy(a);
+      const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+      ln.setAttribute('x1',r.x); ln.setAttribute('y1',r.y);
+      ln.setAttribute('x2',t.x); ln.setAttribute('y2',t.y);
+      ln.setAttribute('class','link');
+      links.appendChild(ln);
+    });
+  });
+  R.forEach(r=>{
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('class','region'); g.setAttribute('data-id',r.id);
+    g.setAttribute('transform',`translate(${r.x},${r.y})`);
+    g.innerHTML =
+      `<title></title>`+
+      `<circle class="rzone" r="30"></circle>`+
+      `<circle class="rz" r="22"></circle>`+
+      `<text class="rcount" dy="1"></text>`+
+      `<text class="rflag" y="-36"></text>`+
+      `<text class="rname" y="46">${r.e}${r.n}</text>`;
+    g.addEventListener('click', ()=>onRegionClick(r.id));
+    regs.appendChild(g);
+  });
+}
+
+function buildStartCards(){
+  const box = $('ccards');
+  Object.keys(KIDS).forEach(id=>{
+    const d = document.createElement('div');
+    d.className = 'ccard';
+    d.innerHTML = `<div class="flag">${FLAGS[id]}</div><div class="cname">${rBy(id).n}</div><div class="kid">代号「${KIDS[id]}」</div>`;
+    d.onclick = ()=>startGame(id);
+    box.appendChild(d);
+  });
+}
+
+function startGame(home){
+  S = {
+    home, turn:1, kills:0, bountyPaid:0, over:false,
+    money:{bai:15, mian:0, zhou:0, lou:0},
+    troops:{tank:30, boomer:0, heli:0},
+    nukes:{1:0,2:0,3:0,4:0},
+    genes:{cao:0, shui:0, huo:0},
+    sel:null, atkLeft:3, nkLeft:2, targeting:0,
+    z:{}, // id -> {n, type}
+    controlled:{}, aiKills:{},
+  };
+  S.controlled[home]=true;
+  Object.keys(KIDS).forEach(id=>{ if(id!==home) S.aiKills[id]=0; });
+  // 初始感染：随机 3 个非本土地区，各 20 僵尸
+  const pool = R.filter(r=>r.id!==home);
+  const first = pool.splice(rnd(pool.length),1)[0];
+  const second = pool.splice(rnd(pool.length),1)[0];
+  const third = pool.splice(rnd(pool.length),1)[0];
+  infect(first.id, 20);
+  infect(second.id, 20);
+  infect(third.id, 20);
+  $('startScreen').style.display='none';
+  $('game').style.display='block';
+  $('log').innerHTML='';
+  log(`🌍 僵尸在【${first.n}】【${second.n}】【${third.n}】同时爆发了！你是${KIDS[home]}（${FLAGS[home]}${rBy(home).n}），快组织抵抗！`, 'bad');
+  log(`💡 初始资金：15 张白纸 + 🚜坦克×30。点地图选目标，买兵后进攻！每回合结束记得领工资。`, 'info');
+  sndDice();
+  render();
+}
+
+/* ================= 感染扩散 ================= */
+function infect(id, n){
+  if (!S.z[id]) S.z[id] = {n:0, type: ZTYPES[rnd(3)]};
+  S.z[id].n += n;
+  if (S.z[id].n > 99) S.z[id].n = 99;
+}
+
+function zombieTurn(){
+  const d = roll();
+  sndDice();
+  const cnt = d<=3 ? 1 : d<=5 ? 2 : 3;
+  const base = S.turn>=12 ? 20 : S.turn>=6 ? 15 : 10;
+  let news = [];
+  for (let i=0;i<cnt;i++){
+    const infectedIds = Object.keys(S.z);
+    if (infectedIds.length===0) return; // 已全部清零（胜利结算在 endTurn 处理）
+    const frontier = new Set();
+    infectedIds.forEach(id=>rBy(id).adj.forEach(a=>{ if(!S.z[a]) frontier.add(a); }));
+    if (frontier.size===0){
+      const rid = infectedIds[rnd(infectedIds.length)];
+      S.z[rid].n = Math.min(99, S.z[rid].n+10);
+      news.push(`【${rBy(rid).n}】僵尸增援 +10`);
+    } else {
+      const arr = [...frontier];
+      const pick = arr[rnd(arr.length)];
+      infect(pick, base);
+      news.push(`【${rBy(pick).n}】出现${ZNAME[S.z[pick].type]}僵尸 ×${base}`);
+    }
+  }
+  // 僵尸自然增殖：所有感染区每回合 +2
+  Object.keys(S.z).forEach(id=>{ S.z[id].n = Math.min(99, S.z[id].n+2); });
+  let summary;
+  if (d===6){
+    Object.keys(S.z).forEach(id=>{ S.z[id].n = Math.min(99, S.z[id].n+5); });
+    summary = `🎲 僵尸掷出 6 —— 大爆发！！${news.join('；')}；所有感染区僵尸 +7！`;
+    log(summary, 'bad');
+  } else {
+    summary = `🎲 僵尸掷出 ${d}：${news.join('；')}；所有感染区僵尸 +2`;
+    log(summary, 'bad');
+  }
+  const zb = $('zbanner');
+  zb.textContent = summary;
+  zb.style.display = 'block';
+  setTimeout(()=>{ zb.style.display='none'; }, 2600);
+}
+
+/* ================= AI 队友 ================= */
+function aiTurn(){
+  const acts = [];
+  Object.keys(S.aiKills).forEach(id=>{
+    const home = id;
+    if (S.z[home]){
+      const k = Math.min(S.z[home].n, 3+rnd(12));
+      S.z[home].n -= k; S.aiKills[id]+=k;
+      if (S.z[home].n<=0) delete S.z[home];
+      acts.push(`${KIDS[id]}（${FLAGS[id]}）在本土消灭 ${k} 个僵尸`);
+    } else if (Math.random()<0.35){
+      const inf = Object.keys(S.z);
+      if (inf.length){
+        const t = inf[rnd(inf.length)];
+        const k = Math.min(S.z[t].n, 2+rnd(5));
+        S.z[t].n -= k; S.aiKills[id]+=k;
+        if (S.z[t].n<=0) delete S.z[t];
+        acts.push(`${KIDS[id]}（${FLAGS[id]}）远征【${rBy(t).n}】消灭 ${k} 个僵尸`);
+      }
+    }
+  });
+  if (acts.length) log('🤝 其他国家行动：' + acts.join('；'), 'info');
+}
+
+/* ================= 货币 ================= */
+function totalVal(){ return TIERS.reduce((s,t)=>s+UNIT[t]*S.money[t],0); }
+function spend(tier, n){
+  const cost = UNIT[tier]*n;
+  if (totalVal() < cost) return false;
+  const i = TIERS.indexOf(tier);
+  let guard = 500;
+  while (S.money[tier] < n && guard-- > 0){
+    let j = -1;
+    for (let k=i+1;k<4;k++){ if (S.money[TIERS[k]]>0){ j=k; break; } }
+    if (j<0) break;
+    S.money[TIERS[j]]--; S.money[TIERS[j-1]]+=3;
+  }
+  if (S.money[tier] < n) return false;
+  S.money[tier]-=n; return true;
+}
+
+/* ================= 商店 ================= */
+function buy(kind){
+  if (S.over) return;
+  if (kind==='crown'){
+    if (spend('lou',20)){ crownWin(); } else log('👑 漏巾不够！需要 20 张漏巾（现在有 '+S.money.lou+' 张）。','bad');
+    render(); return;
+  }
+  const it = SHOP[kind];
+  if (spend(it.tier, it.n)){ it.give(S); log('🛒 '+it.msg, 'good'); sndBuy(); }
+  else log(`💸 钱不够！需要 ${it.n} 张${TNAME[it.tier]}（可去换钱所兑换或等发工资）。`, 'bad');
+  render();
+}
+
+function exchange(spec){
+  const [from,to] = spec.split('>');
+  if (spec.indexOf('>')>=0 && UNIT[from] < UNIT[to]){ // 3低→1高
+    if (S.money[from]>=3){ S.money[from]-=3; S.money[to]+=1; log(`💱 3 张${TNAME[from]} → 1 张${TNAME[to]}`,'good'); }
+    else log(`💸 ${TNAME[from]}不够 3 张！`,'bad');
+  } else { // 1高→3低
+    if (S.money[from]>=1){ S.money[from]-=1; S.money[to]+=3; log(`💱 1 张${TNAME[from]} → 3 张${TNAME[to]}`,'good'); }
+    else log(`💸 没有${TNAME[from]}！`,'bad');
+  }
+  render();
+}
+
+/* ================= 战斗 ================= */
+function controlledIds(){ return Object.keys(S.controlled); }
+function tankAllowed(tid){
+  return controlledIds().some(c=>c===tid || rBy(c).adj.includes(tid));
+}
+
+function onRegionClick(id){
+  if (!S || S.over) return;
+  if (S.targeting){ fireNuke(id); return; }
+  S.sel = id;
+  render();
+}
+
+function openBattle(){
+  const id = S.sel;
+  if (!id || !S.z[id] || S.atkLeft<=0) return;
+  const z = S.z[id];
+  $('battle-title').textContent = `⚔️ 进攻【${rBy(id).n}】`;
+  $('b-zinfo').innerHTML = `敌军：🧟 ${ZNAME[z.type]}僵尸 × <b style="color:#e63946">${z.n}</b>　（克制它要用 ${ZNAME[Object.keys(COUNTER).find(k=>COUNTER[k]===z.type)]}基因针）`;
+  $('in-tank').value=0; $('in-boomer').value=0; $('in-heli').value=0;
+  $('in-tank').disabled = !tankAllowed(id);
+  $('hint-tank').textContent = tankAllowed(id) ? '' : '（不相邻，坦克到不了）';
+  $('diceRow').textContent=''; $('battleResult').textContent='';
+  $('btn-fight').style.display=''; $('b-form').style.display='';
+  $('battleBk').style.display='flex';
+}
+
+function fight(){
+  const id = S.sel;
+  const z = S.z[id]; if (!z) return;
+  const tk = Math.max(0, Math.min(S.troops.tank, parseInt($('in-tank').value)||0));
+  const bm = Math.max(0, Math.min(S.troops.boomer, parseInt($('in-boomer').value)||0));
+  const hl = Math.max(0, Math.min(S.troops.heli, parseInt($('in-heli').value)||0));
+  const total = tk+bm+hl;
+  if (total<=0){ $('battleResult').textContent='❗ 至少要派 1 个兵！'; return; }
+  let gene = document.querySelector('input[name=gene]:checked').value;
+  if (gene && S.genes[gene]<=0) gene='';
+  if (gene) S.genes[gene]--;
+  S.atkLeft--;
+  $('btn-fight').style.display='none';
+  // 掷骰动画
+  const d1 = roll(), d2 = roll();
+  sndDice();
+  let t = 0;
+  const anim = setInterval(()=>{
+    $('diceRow').textContent = FACES[rnd(6)] + ' ' + FACES[rnd(6)];
+    if (++t > 9){
+      clearInterval(anim);
+      $('diceRow').textContent = FACES[d1-1] + ' ' + FACES[d2-1];
+      resolveBattle(id, tk, bm, hl, gene, d1, d2);
+    }
+  }, 80);
+}
+
+function resolveBattle(id, tk, bm, hl, gene, d1, d2){
+  const z = S.z[id];
+  const counter = gene && COUNTER[gene]===z.type;
+  const bonus = counter ? 2 : 0;
+  const committed = tk+bm+hl;
+  const pPow = (d1+bonus)*committed;
+  const zPow = d2*z.n;
+  let html = `我方 (${d1}${bonus?`+${bonus}`:''}) × ${committed} = <b>${pPow}</b> ｜ 僵尸 ${d2} × ${z.n} = <b>${zPow}</b><br>`;
+  if (gene) html += counter ? `💉 ${ZNAME[gene]}基因针命中克制！骰子 +2！<br>` : `💉 基因针没克制对方属性，浪费了……<br>`;
+  if (pPow >= zPow){
+    S.kills += z.n;
+    // 赏金
+    const nb = Math.floor(S.kills/10) - S.bountyPaid;
+    if (nb>0){ S.bountyPaid += nb; S.money.bai += nb; }
+    html += `<span style="color:#1a9e4b;font-size:20px">🎉 胜利！【${rBy(id).n}】的 ${z.n} 个僵尸全部消灭！</span>`;
+    if (nb>0) html += `<br>💰 累计消灭破整十，赏金 +${nb} 白纸！`;
+    log(`⚔️ 解放【${rBy(id).n}】！(${d1}${bonus?`+${bonus}`:''})×${committed}=${pPow} vs ${d2}×${z.n}=${zPow}，消灭僵尸 ${z.n} 个！`, 'good');
+    delete S.z[id];
+    S.controlled[id]=true;
+    sndWin();
+  } else {
+    const loseT=Math.floor(tk/2), loseB=Math.floor(bm/2), loseH=Math.floor(hl/2);
+    S.troops.tank-=loseT; S.troops.boomer-=loseB; S.troops.heli-=loseH;
+    html += `<span style="color:#e63946;font-size:20px">💀 战败……损失坦克${loseT}/轰炸机${loseB}/直升机${loseH}，僵尸还剩 ${z.n} 个！</span>`;
+    log(`⚔️ 进攻【${rBy(id).n}】失利：(${d1}${bonus?`+${bonus}`:''})×${committed}=${pPow} vs ${d2}×${z.n}=${zPow}`, 'bad');
+    sndBoom();
+  }
+  $('battleResult').innerHTML = html;
+  $('btn-fight').style.display='none';
+  $('btn-bcancel').textContent='确定';
+  checkEnd();
+}
+
+/* ================= 核弹 ================= */
+function openNuke(){
+  if (S.nkLeft<=0) return;
+  for (let l=1;l<=4;l++) $('nn'+l).textContent = S.nukes[l];
+  $('nukeBk').style.display='flex';
+}
+function pickNuke(lv){
+  if (S.nukes[lv]<=0){ log('☢️ 该型号核弹没有库存！','bad'); return; }
+  $('nukeBk').style.display='none';
+  S.targeting = lv;
+  log(`☢️ LV${lv} 核弹已就位——点击地图上的目标地区发射！`, 'gold');
+  $('selinfo').textContent = `☢️ 瞄准中（LV${lv}）：点击目标地区！`;
+}
+function fireNuke(id){
+  const lv = S.targeting; S.targeting = 0;
+  if (!S.z[id]){ log('☢️ 目标地区没有僵尸，取消发射（核弹未消耗）。','info'); render(); return; }
+  S.nukes[lv]--; S.nkLeft--;
+  let destroyed = S.z[id].n;
+  const names = [rBy(id).n];
+  delete S.z[id]; S.controlled[id]=true;
+  if (lv===2){
+    rBy(id).adj.forEach(a=>{
+      if (S.z[a]){ const h=Math.floor(S.z[a].n/2); destroyed+=h; S.z[a].n-=h; if(S.z[a].n<=0){delete S.z[a]; S.controlled[a]=true;} }
+    });
+  }
+  if (lv>=3){
+    const extra = lv===3 ? 1 : 2; // LV3 共炸2区，LV4 共炸3区
+    let pool = rBy(id).adj.filter(a=>S.z[a]);
+    for (let i=0;i<extra && pool.length;i++){
+      const pick = pool.splice(rnd(pool.length),1)[0];
+      destroyed += S.z[pick].n; names.push(rBy(pick).n);
+      delete S.z[pick]; S.controlled[pick]=true;
+    }
+  }
+  S.kills += destroyed;
+  const nb = Math.floor(S.kills/10) - S.bountyPaid;
+  if (nb>0){ S.bountyPaid+=nb; S.money.bai+=nb; }
+  const hlj = lv===3 ? '（相当于 2 个黑龙江省！）' : lv===4 ? '（相当于 3 个黑龙江省！！）' : '';
+  log(`☢️💥 核弹 LV${lv} 命中【${names.join('、')}】${hlj} 蘑菇云升起，消灭僵尸 ${destroyed} 个！`, 'gold');
+  sndBoom();
+  render(); checkEnd();
+}
+
+/* ================= 回合 ================= */
+function endTurn(){
+  if (S.over) return;
+  const income = 4 + Math.max(0, Object.keys(S.controlled).length - 1);
+  S.money.bai += income;
+  log(`💰 领到工资：白纸 +${income}（底薪4 + 每解放1个地区+1）`, 'good');
+  aiTurn();
+  if (Object.keys(S.z).length===0){
+    // AI 队友清零了最后的僵尸 → 直接胜利结算，不再进入僵尸回合
+    S.turn++;
+    checkEnd();
+    return;
+  }
+  zombieTurn();
+  S.turn++; S.atkLeft=3; S.nkLeft=2;
+  render();
+  checkEnd();
+}
+
+/* ================= 胜负 ================= */
+function checkEnd(){
+  if (S.over) return;
+  if (Object.keys(S.z).length===0){
+    // 救世主结局
+    S.over = true;
+    const board = [[`${KIDS[S.home]}（你·${FLAGS[S.home]}${rBy(S.home).n}）`, S.kills]]
+      .concat(Object.keys(S.aiKills).map(id=>[`${KIDS[id]}（${FLAGS[id]}${rBy(id).n}）`, S.aiKills[id]]));
+    board.sort((a,b)=>b[1]-a[1]);
+    const top = board[0][0].includes('你');
+    $('endTitle').textContent = top ? '🏆 救世主结局！' : '🎉 世界得救啦！';
+    $('endText').textContent =
+      (top ? '你清零了全世界的僵尸，并且功劳最大，被誉为——救世主！🌍✨\n\n' : '全世界的僵尸被清零了！不过功劳最大的是别人……下次再接再厉！\n\n')
+      + '📊 消灭僵尸排行榜：\n' + board.map((b,i)=>`${['🥇','🥈','🥉','4.','5.','6.'][i]} ${b[0]}：${b[1]} 个`).join('\n')
+      + `\n\n共用了 ${S.turn} 个回合`;
+    $('endScreen').style.display='flex';
+    confetti();
+    sndWin(); setTimeout(sndWin, 700);
+    return;
+  }
+  if (R.every(r=>S.z[r.id])){
+    S.over = true;
+    $('endTitle').textContent = '💀 僵尸占领了全世界……';
+    $('endText').textContent = `13 个地区全部沦陷，人类失败了。\n你一共消灭了 ${S.kills} 个僵尸，坚持了 ${S.turn} 个回合。\n别灰心，点击按钮再战一局！`;
+    $('endScreen').style.display='flex';
+    sndBoom();
+  }
+  render();
+}
+function confetti(){
+  const em = ['🎉','⭐','🎊','✨','🏆','💛','🧡','💚'];
+  for (let i=0;i<42;i++){
+    const c = document.createElement('span');
+    c.className='confetti';
+    c.textContent = em[rnd(em.length)];
+    c.style.left = rnd(100) + 'vw';
+    c.style.animationDuration = (2.2 + Math.random()*2.2) + 's';
+    c.style.animationDelay = (Math.random()*0.9) + 's';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(), 6000);
+  }
+}
+function crownWin(){
+  S.over = true;
+  $('endTitle').textContent = '👑 无限王权结局！';
+  $('endText').textContent = `你耗尽 20 张漏巾，换来传说中的「无限王权」！\n一道金光扫过，全世界的僵尸瞬间蒸发！\n你登基成为——球王！🌍👑\n\n共消灭僵尸 ${S.kills} 个，用了 ${S.turn} 个回合`;
+  $('endScreen').style.display='flex';
+  confetti();
+  sndWin(); setTimeout(sndWin, 600); setTimeout(sndWin, 1200);
+}
+
+/* ================= 渲染 ================= */
+function log(msg, cls){
+  const p = document.createElement('p');
+  if (cls) p.className = cls;
+  p.textContent = msg;
+  $('log').prepend(p);
+}
+
+function render(){
+  if (!S) return;
+  $('m-bai').textContent=S.money.bai; $('m-mian').textContent=S.money.mian;
+  $('m-zhou').textContent=S.money.zhou; $('m-lou').textContent=S.money.lou;
+  $('t-tank').textContent=S.troops.tank; $('t-boomer').textContent=S.troops.boomer; $('t-heli').textContent=S.troops.heli;
+  $('n-total').textContent = S.nukes[1]+S.nukes[2]+S.nukes[3]+S.nukes[4];
+  $('g-total').textContent = S.genes.cao+S.genes.shui+S.genes.huo;
+  $('turn-num').textContent=S.turn; $('kill-num').textContent=S.kills;
+  $('atk-left').textContent=S.atkLeft; $('nk-left').textContent=S.nkLeft;
+  $('nuke-inv').textContent = `${S.nukes[1]}/${S.nukes[2]}/${S.nukes[3]}/${S.nukes[4]}`;
+  $('gc-cao').textContent=S.genes.cao; $('gc-shui').textContent=S.genes.shui; $('gc-huo').textContent=S.genes.huo;
+  // 解放进度条
+  const infN = Object.keys(S.z).length;
+  const libN = 13 - infN;
+  $('progressBar').style.width = (libN/13*100) + '%';
+  $('progressText').textContent = `已解放 ${libN}/13 ｜ 🧟感染区 ${infN}`;
+  // 地图
+  document.querySelectorAll('.region').forEach(g=>{
+    const id = g.getAttribute('data-id');
+    const zc = g.querySelector('.rz'), ct = g.querySelector('.rcount'), fl = g.querySelector('.rflag'), tt = g.querySelector('title');
+    g.classList.toggle('selected', S.sel===id);
+    if (S.z[id]){
+      zc.style.display='';
+      zc.setAttribute('class','rz t-'+S.z[id].type);
+      ct.textContent = '🧟'+S.z[id].n;
+    } else {
+      zc.style.display='none'; ct.textContent='';
+    }
+    let flag = '';
+    if (id===S.home) flag='⭐';
+    else if (S.controlled[id]) flag='🚩';
+    fl.textContent = flag;
+    const z = S.z[id];
+    tt.textContent = rBy(id).n + (z ? `：🧟${ZNAME[z.type]}僵尸 ×${z.n}` : '：✅ 安全') + (tankAllowed(id) ? '（坦克可达）' : '');
+  });
+  // 选中信息 & 按钮
+  if (S.targeting){
+    $('selinfo').textContent = `☢️ 瞄准中（LV${S.targeting}）：点击目标地区！`;
+  } else if (S.sel){
+    const r = rBy(S.sel), z = S.z[S.sel];
+    $('selinfo').textContent = `已选：${r.e}${r.n}` + (z? ` ｜ 🧟${ZNAME[z.type]}僵尸 ×${z.n}` : ' ｜ ✅ 安全') + (tankAllowed(S.sel)?' ｜ 🚜坦克可达':' ｜ 🚜坦克不可达（不相邻）');
+  } else {
+    $('selinfo').textContent = '点击地图选择目标地区';
+  }
+  const canAtk = !S.over && !S.targeting && S.sel && S.z[S.sel] && S.atkLeft>0 &&
+    (S.troops.boomer>0 || S.troops.heli>0 || (tankAllowed(S.sel)&&S.troops.tank>0));
+  $('btn-attack').disabled = !canAtk;
+  $('btn-nuke').disabled = S.over || S.nkLeft<=0 || (S.nukes[1]+S.nukes[2]+S.nukes[3]+S.nukes[4])<=0;
+  // 商店按钮可用性
+  document.querySelectorAll('[data-buy]').forEach(b=>{
+    const k=b.getAttribute('data-buy');
+    if (k==='crown'){ b.disabled = totalVal() < 20*UNIT.lou; return; }
+    const it=SHOP[k];
+    b.disabled = totalVal() < it.n*UNIT[it.tier];
+  });
+}
+
+/* ================= 绑定 ================= */
+document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buy(b.getAttribute('data-buy')));
+document.querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>exchange(b.getAttribute('data-ex')));
+document.querySelectorAll('[data-fire]').forEach(b=>b.onclick=()=>pickNuke(parseInt(b.getAttribute('data-fire'))));
+document.querySelectorAll('.maxb').forEach(b=>b.onclick=()=>{
+  const inp=$(b.getAttribute('data-max'));
+  const kind = inp.id==='in-tank'?'tank':inp.id==='in-boomer'?'boomer':'heli';
+  inp.value = S.troops[kind];
+});
+$('btn-attack').onclick=openBattle;
+$('btn-fight').onclick=fight;
+$('btn-bcancel').onclick=()=>{ $('battleBk').style.display='none'; $('btn-bcancel').textContent='取消'; render(); };
+$('btn-nuke').onclick=openNuke;
+$('btn-ncancel').onclick=()=>{ $('nukeBk').style.display='none'; };
+$('btn-end').onclick=endTurn;
+$('btn-help').onclick=()=>{ $('helpBk').style.display='flex'; };
+$('btn-hclose').onclick=()=>{ $('helpBk').style.display='none'; };
+$('btn-mute').onclick=function(){ muted=!muted; this.textContent = muted?'🔇 音效关':'🔊 音效开'; };
+$('btn-restart').onclick=()=>location.reload();
+
+buildMap();
+buildStartCards();
+</script>
+</body>
+</html>
