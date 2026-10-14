@@ -159,19 +159,35 @@
     #legend { font-size: 11px; padding: 4px 8px; }
   }
 </style>
+<script>
+// 早期错误捕获：任何脚本错误都会在页面上显示红色横幅（方便手机端排查）
+window.__bootErrors = [];
+window.addEventListener('error', function(e){
+  window.__bootErrors.push(e.message + ' @ ' + (e.filename||'').split('/').pop() + ':' + e.lineno);
+  var b = document.getElementById('errBanner');
+  if (!b && document.body) {
+    b = document.createElement('div'); b.id = 'errBanner';
+    b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#e63946;color:#fff;padding:10px;font-size:14px;text-align:center;font-weight:bold;';
+    document.body.prepend(b);
+  }
+  if (b) b.textContent = '⚠️ 游戏脚本出错：' + window.__bootErrors[0] + '　请截屏发给爸爸！';
+});
+</script>
 </head>
 <body>
 
 <!-- ============ 开始界面（三步向导） ============ -->
 <div id="startScreen">
   <h1>🧟 僵尸爆发 🧟</h1>
-  <div class="sub">—— 球 球 之 战 v2.1 ——</div>
+  <div class="sub">—— 球 球 之 战 v2.2 ——</div>
   <div class="credit">原作设计：小袁同学（五年级） · 规则补全与数字化：Kimi</div>
   <div class="pickedHint" id="pickedHint">👇 点下面的卡片开始</div>
 
   <div id="step1">
     <div class="stepTitle">第 1 步：选择游戏模式</div>
-    <div class="ccards" id="modeCards"></div>
+    <div class="ccards" id="modeCards">
+      <div id="bootWait" style="width:100%;padding:20px;color:#2b3a55;font-size:15px;">⏳ 正在加载选项……<br>如果 5 秒后这里还是这行字，请截屏发给爸爸！</div>
+    </div>
   </div>
 
   <div id="step2" class="hidden">
@@ -480,6 +496,7 @@ function buildMap(){
 const pick = {mode:null, role:null};
 function buildStartCards(){
   const mc = $('modeCards');
+  mc.innerHTML = ''; // 清除"正在加载"占位提示（脚本存活证明）
   Object.keys(MODES).forEach(k=>{
     const d = document.createElement('div');
     d.className = 'ccard';
